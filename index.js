@@ -5,7 +5,7 @@ const cron = require('node-cron');
 require('dotenv').config();
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT_DEPLOY || 3000;
 console.log(JSON.stringify(process.env, null, 2));
 console.log(`${process.env.PUPPETEER_EXECUTABLE_PATH}`)
 
@@ -34,7 +34,7 @@ const scrape = async (ville, destinataire) => {
     ville = ville.charAt(0).toUpperCase() + ville.slice(1);
     const url = 'https://trouverunlogement.lescrous.fr';
     const email = process.env.EMAIL;
-    const pwd = process.env.PWD;
+    const pwd = process.env.CROUS_PWD;
 
     const seConnecter = '.fr-icon-account-line';
     const connexionMesservicesEtudiant = '.logo-mse-connect-fr';
