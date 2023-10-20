@@ -11,15 +11,16 @@ app.get('/', (req, res) => {
     res.send('CROUS Scrapper app').end();
 });
 
-app.get('/scrape/:ville/:destinataire', async (req, res) => {
+app.get('/scrape/:withZoom/:ville/:destinataire', async (req, res) => {
     const ville = req.params.ville;
     const destinataire = req.params.destinataire;
+    const zoom = req.params.withZoom === 'zoom' ?? false;
 
     const regex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g;
     if (!regex.test(destinataire)) {
         res.status(400).send('Le destinataire doit être un email').end();
     } else {
-        res.send(await scrape(ville, destinataire)).end();
+        res.send(await scrape(ville, destinataire, zoom)).end();
     }
 });
 
@@ -27,7 +28,7 @@ app.listen(port, () => {
     console.log(`CROUS Scrapper app listening at port ${port}`)
 });
 
-const scrape = async (ville, destinataire) => {
+const scrape = async (ville, destinataire, withZoom) => {
     'use strict';
     ville = ville.charAt(0).toUpperCase() + ville.slice(1);
     const url = 'https://trouverunlogement.lescrous.fr';
@@ -80,28 +81,36 @@ const scrape = async (ville, destinataire) => {
 
     await page.locator(paris).wait();
     await page.locator(paris).click();
-    console.log('Recherche de logement à Paris sélectionnée');
+    console.log(`Recherche de logement à ${ville} sélectionnée`);
 
     await page.locator(logementIndividuel).click();
     await page.locator(lancerUneRechercheBtn).wait();
     await page.locator(lancerUneRechercheBtn).click();
     console.log('Recherche en cours...');
 
-    await page.locator(openMap).wait();
-    await page.locator(openMap).click();
-    console.log('Ouverture de la carte');
+    if (withZoom) {
+        await page.locator(openMap).wait();
+        await page.locator(openMap).click();
+        console.log('Ouverture de la carte');
 
-    await page.locator(zoomIn).wait();
-    await page.locator(zoomIn).click();
-    console.log('Zoom sur la carte');
+        await page.locator(zoomIn).wait();
+        await page.locator(zoomIn).click();
+        console.log('Zoom sur la carte');
 
-    await page.locator(reloadSearch).wait();
-    await page.locator(reloadSearch).click();
-    console.log('Recherche en cours...');
+        await page.locator(reloadSearch).wait();
+        await page.locator(reloadSearch).click();
+        console.log('Recherche en cours...');
+    }
 
-    await page.locator(logement).wait();
-    const logements = await page.$$(logement);
-    console.log('Récupération des logements');
+    let logements;
+    try {
+        await page.locator(logement).wait();
+        logements = await page.$$(logement);
+        console.log('Récupération des logements');
+    } catch (e) {
+        console.log('Aucun logement disponible');
+        return 'Aucun logement disponible';
+    }
 
     const logementsData = [];
     for (const logement of logements) {
