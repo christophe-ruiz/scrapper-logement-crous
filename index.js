@@ -47,7 +47,7 @@ const scrape = async (ville, destinataire) => {
     const reloadSearch = '.svelte-1l12jlo';
 
     const browser = await puppeteer.launch({
-        headless: 'new',
+        headless: false,
         defaultViewport: null,
         args: [
             '--start-maximized',
@@ -70,6 +70,7 @@ const scrape = async (ville, destinataire) => {
     await page.locator(connexionMesservicesEtudiant).click();
     console.log('Connexion en cours...');
     await page.locator('#username').wait();
+    console.log('Connexion avec email: ' + email);
     await page.type('#username', email);
     await page.type('#password', pwd);
     await page.locator(connectBtn).click();
