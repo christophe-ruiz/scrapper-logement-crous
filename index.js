@@ -7,6 +7,10 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 3000;
 
+app.get('/', (req, res) => {
+    res.send('CROUS Scrapper app').end();
+});
+
 app.get('/scrape/:ville/:destinataire', async (req, res) => {
     const ville = req.params.ville;
     const destinataire = req.params.destinataire;
