@@ -47,11 +47,11 @@ const scrape = async (ville, destinataire) => {
     const reloadSearch = '.svelte-1l12jlo';
 
     const browser = await puppeteer.launch({
+        headless: 'new',
+        defaultViewport: null,
         args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--single-process',
-            'no-zygote',
+            '--start-maximized',
+            `--window-size=1920,1080`,
         ],
         executablePath: process.env.NODE_ENV === 'production' ? process.env.PUPPETEER_EXECUTABLE_PATH : puppeteer.executablePath(),
     });
