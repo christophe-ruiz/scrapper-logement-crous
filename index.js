@@ -6,6 +6,8 @@ require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
+console.log(JSON.stringify(process.env, null, 2));
+console.log(`${process.env.PUPPETEER_EXECUTABLE_PATH}`)
 
 app.get('/', (req, res) => {
     res.send('CROUS Scrapper app').end();
