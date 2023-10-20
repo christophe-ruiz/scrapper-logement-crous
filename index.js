@@ -6,8 +6,6 @@ require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT_DEPLOY || 3000;
-console.log(JSON.stringify(process.env, null, 2));
-console.log(`${process.env.PUPPETEER_EXECUTABLE_PATH}`)
 
 app.get('/', (req, res) => {
     res.send('CROUS Scrapper app').end();
@@ -71,7 +69,6 @@ const scrape = async (ville, destinataire) => {
     await page.locator(connexionMesservicesEtudiant).click();
     console.log('Connexion en cours...');
     await page.locator('#username').wait();
-    console.log('Connexion avec email: ' + email);
     await page.type('#username', email);
     await page.type('#password', pwd);
     await page.locator(connectBtn).click();
