@@ -61,6 +61,7 @@ const scrape = async (ville, destinataire) => {
     await page.goto(url);
     console.log('Page chargée');
 
+    await page.locator(seConnecter).wait();
     await page.locator(seConnecter).click();
     console.log('Connexion...');
 
