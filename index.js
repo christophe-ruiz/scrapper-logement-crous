@@ -164,7 +164,10 @@ const scrape = async (ville, destinataire, withZoom) => {
         await transporter.sendMail(mailOptions);
         logementsPrecedents[ville] = logementsActuels;
         process.env.LOGEMENTS_PRECEDENTS = JSON.stringify(logementsPrecedents);
+        console.log('Envoi des données terminé');
+        return nouveauxLogements;
     } else {
         console.log('Pas de nouveaux logements');
+        return 'Pas de nouveaux logements';
     }
 };
