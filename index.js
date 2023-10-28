@@ -1,7 +1,7 @@
 const puppeteer = require('puppeteer');
 const nodemailer = require('nodemailer');
 const express = require('express');
-const cron = require('node-cron');
+const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
@@ -126,27 +126,46 @@ const scrape = async (ville, destinataire, withZoom) => {
     console.log('Récupération des logements terminée');
     await browser.close();
 
-    console.log('Envoi des données par mail...');
-    const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: process.env.NODEMAILER_USER,
-            pass: process.env.NODEMAILER_PASS
-        },
+    const logementsActuels = logementsData; // Les logements actuels
+
+    // Charger les logements précédents depuis un fichier JSON (s'il existe)
+    let logementsPrecedents = [];
+    try {
+        const data = fs.readFileSync('logements_precedents.json', 'utf8');
+        logementsPrecedents = JSON.parse(data) ?? [];
+    } catch (err) {
+        // Le fichier n'existe pas ou il y a une erreur lors de la lecture
+        console.error('Erreur à la lecture du fichier des logements: ', err);
+        return;
+    }
+
+    // Comparer les logements actuels avec les logements précédents
+    const nouveauxLogements = logementsActuels.filter((logement) => {
+        return !logementsPrecedents.some((prevLogement) => prevLogement.url === logement.url);
     });
-    const mailOptions = {
-        from: process.env.NODEMAILER_USER,
-        to: `${destinataire}`,
-        subject: `Logements disponibles à ${ville} 🏙`,
-        text: JSON.stringify(logementsData, null, 2)
-    };
-    return await transporter.sendMail(mailOptions, function (error, info) {
-        if (error) {
-            console.log('Erreur lors de l\'envoi des données par mail: ' + error);
-            return 'Erreur lors de l\'envoi des données par mail: ' + error;
-        } else {
-            console.log('Données envoyées par mail: ' + info.response);
-            return 'Données envoyées par mail: ' + info.response;
-        }
-    });
+
+    if (nouveauxLogements.length > 0) {
+        console.log('Envoi des données par mail...');
+        // Il y a de nouveaux logements, envoyez un e-mail
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.NODEMAILER_USER,
+                pass: process.env.NODEMAILER_PASS
+            },
+        });
+        const mailOptions = {
+            from: process.env.NODEMAILER_USER,
+            to: `${destinataire}`,
+            subject: `Nouveaux logements disponibles à ${ville} 🏙`,
+            text: JSON.stringify(nouveauxLogements, null, 2)
+        };
+        await transporter.sendMail(mailOptions);
+
+        // Mettez à jour les logements précédents avec les logements actuels
+        logementsPrecedents = logementsActuels;
+        fs.writeFileSync('logements_precedents.json', JSON.stringify(logementsPrecedents, null, 2));
+    } else {
+        console.log('Pas de nouveaux logements');
+    }
 };

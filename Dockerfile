@@ -5,6 +5,8 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 WORKDIR /usr/src/app
 
 COPY package*.json ./
+COPY logements_precedents.json ./
 RUN npm ci
 COPY . .
+EXPOSE ${PORT_DEPLOY}
 CMD ["node", "index.js"]
