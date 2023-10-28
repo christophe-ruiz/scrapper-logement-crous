@@ -139,7 +139,7 @@ const scrape = async (ville, destinataire, withZoom) => {
         return;
     }
 
-
+    console.log(`logementsPrecedents: ${JSON.stringify(logementsPrecedents)}`)
     // Comparer les logements actuels avec les logements précédents
     const nouveauxLogements = logementsActuels.filter((logement) => {
         if (!logementsPrecedents[ville]) {
