@@ -131,7 +131,7 @@ const scrape = async (ville, destinataire, withZoom) => {
     // Charger les logements précédents depuis un fichier JSON (s'il existe)
     let logementsPrecedents = [];
     try {
-        const logementsPrecedentsEnv = process.env.LOGEMENTS_PRECEDENTS ?? '[]';
+        const logementsPrecedentsEnv = process.env.LOGEMENTS_PRECEDENTS ?? '{}';
         logementsPrecedents = JSON.parse(logementsPrecedentsEnv);
     } catch (err) {
         // Le fichier n'existe pas ou il y a une erreur lors de la lecture
@@ -142,7 +142,7 @@ const scrape = async (ville, destinataire, withZoom) => {
 
     // Comparer les logements actuels avec les logements précédents
     const nouveauxLogements = logementsActuels.filter((logement) => {
-        return !logementsPrecedents.some((prevLogement) => prevLogement.url === logement.url);
+        return !logementsPrecedents[ville].some((prevLogement) => prevLogement.url === logement.url);
     });
 
     if (nouveauxLogements.length > 0) {
@@ -162,7 +162,8 @@ const scrape = async (ville, destinataire, withZoom) => {
             text: JSON.stringify(nouveauxLogements, null, 2)
         };
         await transporter.sendMail(mailOptions);
-        process.env.LOGEMENTS_PRECEDENTS = JSON.stringify(logementsActuels);
+        logementsPrecedents[ville] = logementsActuels;
+        process.env.LOGEMENTS_PRECEDENTS = JSON.stringify(logementsPrecedents);
     } else {
         console.log('Pas de nouveaux logements');
     }
