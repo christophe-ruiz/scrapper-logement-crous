@@ -142,7 +142,10 @@ const scrape = async (ville, destinataire, withZoom) => {
 
     // Comparer les logements actuels avec les logements précédents
     const nouveauxLogements = logementsActuels.filter((logement) => {
-        return !logementsPrecedents[ville].some((prevLogement) => prevLogement.url === logement.url);
+        if (!logementsPrecedents[ville]) {
+            return [];
+        }
+        else return !logementsPrecedents[ville].some((prevLogement) => prevLogement.url === logement.url);
     });
 
     if (nouveauxLogements.length > 0) {
