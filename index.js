@@ -131,13 +131,14 @@ const scrape = async (ville, destinataire, withZoom) => {
     // Charger les logements précédents depuis un fichier JSON (s'il existe)
     let logementsPrecedents = [];
     try {
-        const data = fs.readFileSync('logements_precedents.json', 'utf8');
-        logementsPrecedents = JSON.parse(data) ?? [];
+        const logementsPrecedentsEnv = process.env.LOGEMENTS_PRECEDENTS ?? '[]';
+        logementsPrecedents = JSON.parse(logementsPrecedentsEnv);
     } catch (err) {
         // Le fichier n'existe pas ou il y a une erreur lors de la lecture
         console.error('Erreur à la lecture du fichier des logements: ', err);
         return;
     }
+
 
     // Comparer les logements actuels avec les logements précédents
     const nouveauxLogements = logementsActuels.filter((logement) => {
@@ -161,10 +162,7 @@ const scrape = async (ville, destinataire, withZoom) => {
             text: JSON.stringify(nouveauxLogements, null, 2)
         };
         await transporter.sendMail(mailOptions);
-
-        // Mettez à jour les logements précédents avec les logements actuels
-        logementsPrecedents = logementsActuels;
-        fs.writeFileSync('logements_precedents.json', JSON.stringify(logementsPrecedents, null, 2));
+        process.env.LOGEMENTS_PRECEDENTS = JSON.stringify(logementsActuels);
     } else {
         console.log('Pas de nouveaux logements');
     }
