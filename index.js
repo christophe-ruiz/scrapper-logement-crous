@@ -58,7 +58,12 @@ const scrape = async (ville, destinataire, withZoom) => {
     const page = await browser.newPage();
 
     console.log('Chargement...');
-    await page.goto(url);
+    try {
+        await page.goto(url);
+    } catch (e) {
+        console.log('Erreur lors du chargement de la page: ' + e);
+        return 'Erreur lors du chargement de la page';
+    }
     console.log('Page chargée');
 
     await page.locator(seConnecter).wait();
