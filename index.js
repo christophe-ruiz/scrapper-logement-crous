@@ -20,7 +20,13 @@ app.get('/scrape/:withZoom/:ville/:destinataire', async (req, res) => {
     if (!regex.test(destinataire)) {
         res.status(400).send('Le destinataire doit être un email').end();
     } else {
-        res.send(await scrape(ville, destinataire, zoom)).end();
+        let r;
+        try {
+            r = await scrape(ville, destinataire, zoom)
+        } catch (e) {
+            r = 'ERREUR: ' + e;
+        }
+        res.send(r).end();
     }
 });
 
