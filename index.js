@@ -144,14 +144,8 @@ const scrape = async (ville, destinataire, withZoom) => {
 
     // Charger les logements précédents depuis un fichier JSON (s'il existe)
     let logementsPrecedents = [];
-    try {
-        const logementsPrecedentsEnv = global_logements_precedents ?? '{}';
-        logementsPrecedents = JSON.parse(logementsPrecedentsEnv);
-    } catch (err) {
-        // Le fichier n'existe pas ou il y a une erreur lors de la lecture
-        console.error('Erreur à la lecture du fichier des logements: ', err);
-        return;
-    }
+
+    logementsPrecedents = {...global_logements_precedents};
 
     console.log(`logementsPrecedents: ${JSON.stringify(logementsPrecedents)}`)
     // Comparer les logements actuels avec les logements précédents
@@ -180,7 +174,7 @@ const scrape = async (ville, destinataire, withZoom) => {
         };
         await transporter.sendMail(mailOptions);
         logementsPrecedents[ville] = logementsActuels;
-        global_logements_precedents = JSON.stringify(logementsPrecedents);
+        global_logements_precedents = logementsPrecedents;
         console.log('Envoi des données terminé');
         return nouveauxLogements;
     } else {
