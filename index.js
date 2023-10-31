@@ -20,13 +20,13 @@ app.get('/scrape/:withZoom/:ville/:destinataire', async (req, res) => {
     if (!regex.test(destinataire)) {
         res.status(400).send('Le destinataire doit être un email').end();
     } else {
-        let r;
-        try {
-            r = await scrape(ville, destinataire, zoom)
-        } catch (e) {
-            r = 'ERREUR: ' + e;
-        }
-        res.send(r).end();
+        await scrape(ville, destinataire, zoom)
+            .then((result) => {
+                res.status(200).send(result).end();
+            })
+            .catch((err) => {
+                res.status(500).send('Erreur lors du scraping: ' + err).end();
+            });
     }
 });
 
@@ -65,7 +65,10 @@ const scrape = async (ville, destinataire, withZoom) => {
 
     console.log('Chargement...');
     try {
-        await page.goto(url);
+        await page.goto(url, {
+            waitUntil: 'load',
+            timeout: 0
+        });
     } catch (e) {
         console.log('Erreur lors du chargement de la page: ' + e);
         return 'Erreur lors du chargement de la page';
