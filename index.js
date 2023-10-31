@@ -69,6 +69,7 @@ const scrape = async (ville, destinataire, withZoom) => {
         await page.goto(url);
     } catch (e) {
         console.log('Erreur lors du chargement de la page: ' + e);
+        await browser.close();
         return 'Erreur lors du chargement de la page';
     }
     console.log('Page chargée');
@@ -121,6 +122,7 @@ const scrape = async (ville, destinataire, withZoom) => {
         console.log('Récupération des logements');
     } catch (e) {
         console.log('Aucun logement disponible');
+        await browser.close();
         return 'Aucun logement disponible';
     }
 
