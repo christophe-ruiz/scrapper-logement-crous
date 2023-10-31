@@ -6,6 +6,7 @@ require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT_DEPLOY || 3000;
+let global_logements_precedents = {};
 
 app.get('/', (req, res) => {
     res.send('CROUS Scrapper app').end();
@@ -65,10 +66,7 @@ const scrape = async (ville, destinataire, withZoom) => {
 
     console.log('Chargement...');
     try {
-        await page.goto(url, {
-            waitUntil: 'load',
-            timeout: 0
-        });
+        await page.goto(url);
     } catch (e) {
         console.log('Erreur lors du chargement de la page: ' + e);
         return 'Erreur lors du chargement de la page';
@@ -145,7 +143,7 @@ const scrape = async (ville, destinataire, withZoom) => {
     // Charger les logements précédents depuis un fichier JSON (s'il existe)
     let logementsPrecedents = [];
     try {
-        const logementsPrecedentsEnv = process.env.LOGEMENTS_PRECEDENTS ?? '{}';
+        const logementsPrecedentsEnv = global_logements_precedents ?? '{}';
         logementsPrecedents = JSON.parse(logementsPrecedentsEnv);
     } catch (err) {
         // Le fichier n'existe pas ou il y a une erreur lors de la lecture
@@ -180,7 +178,7 @@ const scrape = async (ville, destinataire, withZoom) => {
         };
         await transporter.sendMail(mailOptions);
         logementsPrecedents[ville] = logementsActuels;
-        process.env.LOGEMENTS_PRECEDENTS = JSON.stringify(logementsPrecedents);
+        global_logements_precedents = JSON.stringify(logementsPrecedents);
         console.log('Envoi des données terminé');
         return nouveauxLogements;
     } else {
