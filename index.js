@@ -163,21 +163,35 @@ const scrape = async (browser, ville, destinataire, withZoom) => {
         });
 
         let emailContent = '';
-        let emailContentHtml = '';
+        let emailContentHtml = ``;
         nouveauxLogements.forEach((logement, index) => {
-            emailContent += `Logement ${index + 1}:\n`;
-            emailContent += `Titre: ${logement.titre}\n`;
+            emailContent += `Nom: ${logement.titre}\n`;
             emailContent += `Prix: ${logement.prix}\n`;
             emailContent += `Adresse: ${logement.adresse}\n`;
             emailContent += `Taille: ${logement.taille}\n`;
             emailContent += `URL: ${logement.url}\n\n`;
 
-            emailContentHtml += `<b>Logement ${index + 1}:</b>\n`;
-            emailContentHtml += `Titre: ${logement.titre}\n`;
-            emailContentHtml += `Prix: ${logement.prix}\n`;
-            emailContentHtml += `Adresse: ${logement.adresse}\n`;
-            emailContentHtml += `Taille: ${logement.taille}\n`;
-            emailContentHtml += `URL: ${logement.url}\n\n`;
+            emailContentHtml += `
+            <div style="margin-bottom: 18px; margin-top: 0; padding: 8px 16px; box-sizing: border-box; border-radius: 20px; background: #DEDEDE;">
+                <h2 style="color: #101820;font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold; margin-bottom: 8px;">${logement.titre}</h2>
+                <p style="color: #101820;font-family: 'Arial', sans-serif; font-size: 14px; margin: 0; padding:0;">
+                    <b>Prix</b>
+                    <span style="color: #101820; background: white; padding: 3px 12px; border-radius: 25px; box-sizing: border-box; margin-left: 4px;"> ${logement.prix}</span>
+                </p>
+                <p style="color: #101820;font-family: 'Arial', sans-serif; font-size: 14px; margin: 0; padding: 0;">
+                    <b>Adresse</b>
+                    <span style="color: #101820; background: white; padding: 3px 12px; border-radius: 25px; box-sizing: border-box; margin-left: 4px;"> ${logement.adresse}</span>
+                </p>
+                <p style="color: #101820;font-family: 'Arial', sans-serif; font-size: 14px; margin: 0; padding: 0;">
+                    <b>Taille</b>
+                    <span style="color: #101820; background: white; padding: 3px 12px; border-radius: 25px; box-sizing: border-box; margin-left: 4px;"> ${logement.taille}</span>
+                </p>
+                <p style="color: #101820;font-family: 'Arial', sans-serif; font-size: 14px; margin: 0; padding: 0;">
+                    <b>URL</b>
+                    <a style="color: #101820; font-weight: bold; text-decoration: underline; background: white; padding: 3px 12px; border-radius: 25px; box-sizing: border-box; margin-left: 4px;" href="${logement.url}">Accéder au logement</a>
+                </p>
+            </div>
+        `;
         });
 
         const mailOptions = {
