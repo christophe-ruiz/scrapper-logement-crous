@@ -21,11 +21,20 @@ app.get('/scrape/:withZoom/:ville/:destinataire', async (req, res) => {
     if (!regex.test(destinataire)) {
         res.status(400).send('Le destinataire doit être un email').end();
     } else {
-        await scrape(ville, destinataire, zoom)
+        const browser = await puppeteer.launch({
+            defaultViewport: null,
+            args: [
+                '--start-maximized',
+                `--window-size=1920,1080`,
+            ],
+            executablePath: process.env.NODE_ENV === 'production' ? process.env.PUPPETEER_EXECUTABLE_PATH : puppeteer.executablePath(),
+        });
+        await scrape(browser, ville, destinataire, zoom)
             .then((result) => {
                 res.status(200).send(result).end();
             })
             .catch((err) => {
+                browser.close();
                 res.status(500).send('Erreur lors du scraping: ' + err).end();
             });
     }
@@ -35,7 +44,7 @@ app.listen(port, () => {
     console.log(`CROUS Scrapper app listening at port ${port}`)
 });
 
-const scrape = async (ville, destinataire, withZoom) => {
+const scrape = async (browser, ville, destinataire, withZoom) => {
     'use strict';
     ville = ville.charAt(0).toUpperCase() + ville.slice(1);
     const url = 'https://trouverunlogement.lescrous.fr';
@@ -54,24 +63,10 @@ const scrape = async (ville, destinataire, withZoom) => {
     const zoomIn = '.leaflet-control-zoom-in';
     const reloadSearch = '.svelte-1l12jlo';
 
-    const browser = await puppeteer.launch({
-        defaultViewport: null,
-        args: [
-            '--start-maximized',
-            `--window-size=1920,1080`,
-        ],
-        executablePath: process.env.NODE_ENV === 'production' ? process.env.PUPPETEER_EXECUTABLE_PATH : puppeteer.executablePath(),
-    });
     const page = await browser.newPage();
 
     console.log('Chargement...');
-    try {
-        await page.goto(url);
-    } catch (e) {
-        console.log('Erreur lors du chargement de la page: ' + e);
-        await browser.close();
-        return 'Erreur lors du chargement de la page';
-    }
+    await page.goto(url);
     console.log('Page chargée');
 
     await page.locator(seConnecter).wait();
@@ -166,12 +161,33 @@ const scrape = async (ville, destinataire, withZoom) => {
                 pass: process.env.NODEMAILER_PASS
             },
         });
+
+        let emailContent = '';
+        let emailContentHtml = '';
+        nouveauxLogements.forEach((logement, index) => {
+            emailContent += `Logement ${index + 1}:\n`;
+            emailContent += `Titre: ${logement.titre}\n`;
+            emailContent += `Prix: ${logement.prix}\n`;
+            emailContent += `Adresse: ${logement.adresse}\n`;
+            emailContent += `Taille: ${logement.taille}\n`;
+            emailContent += `URL: ${logement.url}\n\n`;
+
+            emailContentHtml += `<b>Logement ${index + 1}:</b>\n`;
+            emailContentHtml += `Titre: ${logement.titre}\n`;
+            emailContentHtml += `Prix: ${logement.prix}\n`;
+            emailContentHtml += `Adresse: ${logement.adresse}\n`;
+            emailContentHtml += `Taille: ${logement.taille}\n`;
+            emailContentHtml += `URL: ${logement.url}\n\n`;
+        });
+
         const mailOptions = {
             from: process.env.NODEMAILER_USER,
             to: `${destinataire}`,
             subject: `Nouveaux logements disponibles à ${ville} 🏙`,
-            text: JSON.stringify(nouveauxLogements, null, 2)
+            text: emailContent,
+            html: emailContentHtml
         };
+
         await transporter.sendMail(mailOptions);
         logementsPrecedents[ville] = logementsActuels;
         global_logements_precedents = logementsPrecedents;
