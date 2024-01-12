@@ -1,12 +1,15 @@
 const puppeteer = require('puppeteer');
 const nodemailer = require('nodemailer');
 const express = require('express');
-const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT_DEPLOY || 3000;
 let global_logements_precedents = {};
+
+app.listen(port, () => {
+    console.log(`CROUS Scrapper app listening at port ${port}`)
+});
 
 app.get('/', (req, res) => {
     res.send('CROUS Scrapper app').end();
@@ -22,6 +25,7 @@ app.get('/scrape/:withZoom/:ville/:destinataire', async (req, res) => {
         res.status(400).send('Le destinataire doit être un email').end();
     } else {
         const browser = await puppeteer.launch({
+            headless: 'new',
             defaultViewport: null,
             args: [
                 '--start-maximized',
@@ -35,13 +39,10 @@ app.get('/scrape/:withZoom/:ville/:destinataire', async (req, res) => {
             })
             .catch((err) => {
                 browser.close();
-                res.status(500).send('Erreur lors du scraping: ' + err).end();
+                console.error(`Erreur lors du scraping: ${err}`);
+                res.status(500).send(`Erreur lors du scraping: ${err}`).end();
             });
     }
-});
-
-app.listen(port, () => {
-    console.log(`CROUS Scrapper app listening at port ${port}`)
 });
 
 const scrape = async (browser, ville, destinataire, withZoom) => {
@@ -164,7 +165,7 @@ const scrape = async (browser, ville, destinataire, withZoom) => {
 
         let emailContent = '';
         let emailContentHtml = ``;
-        nouveauxLogements.forEach((logement, index) => {
+        nouveauxLogements.forEach((logement) => {
             emailContent += `Nom: ${logement.titre}\n`;
             emailContent += `Prix: ${logement.prix}\n`;
             emailContent += `Adresse: ${logement.adresse}\n`;
