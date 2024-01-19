@@ -25,7 +25,7 @@ app.get('/scrape/:withZoom/:ville/:destinataire', async (req, res) => {
         res.status(400).send('Le destinataire doit être un email').end();
     } else {
         const browser = await puppeteer.launch({
-            headless: 'new',
+            headless: true,
             defaultViewport: null,
             args: [
                 '--no-sandbox',
