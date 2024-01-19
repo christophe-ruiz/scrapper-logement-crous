@@ -26,8 +26,8 @@ L'application peut être facilement déployée sur render.com et un Google Cloud
 
 ## Exemples
 ### 1
-`curl http://localhost:3001/scrape/zoom/Paris/example@example.com`
-Permet de récupérer les logements à `Paris` et de les envoyer par mail à `example@example.com`. `zoom` permet de cliquer une fois sur le zoom de la carte pour restreindre un peu plus la recherche.
+`curl http://localhost:3001/scrape/2/Paris/example@example.com`
+Permet de récupérer les logements à `Paris` et de les envoyer par mail à `example@example.com`. `2` permet de cliquer deux fois sur le zoom de la carte pour restreindre un peu plus la recherche.
 ### 2
-`curl http://localhost:3001/scrape/noZoom/Marseille/example@example.com`
-Permet de récupérer les logements à `Marseille` et de les envoyer par mail à `example@example.com`. `noZoom` ou toute valeur différente de `zoom` permet de ne pas zoomer sur la carte et d'avoir une recherche un peu plus large.
+`curl http://localhost:3001/scrape/0/Marseille/example@example.com`
+Permet de récupérer les logements à `Marseille` et de les envoyer par mail à `example@example.com`. Le zoom à `0` permet de ne pas zoomer sur la carte et d'avoir une recherche avec le zoom par défaut.

@@ -18,7 +18,7 @@ app.get('/', (req, res) => {
 app.get('/scrape/:withZoom/:ville/:destinataire', async (req, res) => {
     const ville = req.params.ville;
     const destinataire = req.params.destinataire;
-    const zoom = req.params.withZoom === 'zoom' ?? false;
+    const zoom = parseInt(req.params.withZoom);
 
     const regex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g;
     if (!regex.test(destinataire)) {
@@ -28,10 +28,10 @@ app.get('/scrape/:withZoom/:ville/:destinataire', async (req, res) => {
             headless: 'new',
             defaultViewport: null,
             args: [
+                '--no-sandbox',
                 '--start-maximized',
                 `--window-size=1920,1080`,
             ],
-            executablePath: process.env.NODE_ENV === 'production' ? process.env.PUPPETEER_EXECUTABLE_PATH : puppeteer.executablePath(),
         });
         await scrape(browser, ville, destinataire, zoom)
             .then((result) => {
@@ -62,7 +62,8 @@ const scrape = async (browser, ville, destinataire, withZoom) => {
     const paris = '#PlaceAutocompletearia-autocomplete-1-option--0';
     const openMap = '.toggleListeMap';
     const zoomIn = '.leaflet-control-zoom-in';
-    const reloadSearch = '.svelte-1l12jlo';
+    const zoomOut = '.leaflet-control-zoom-out';
+    const reloadSearch = '.svelte-1l12jlo :first-child';
 
     const page = await browser.newPage();
 
@@ -97,19 +98,23 @@ const scrape = async (browser, ville, destinataire, withZoom) => {
     await page.locator(lancerUneRechercheBtn).click();
     console.log('Recherche en cours...');
 
+    await page.locator(openMap).wait();
+    await page.locator(openMap).click();
+    console.log('Ouverture de la carte');
+
     if (withZoom) {
-        await page.locator(openMap).wait();
-        await page.locator(openMap).click();
-        console.log('Ouverture de la carte');
-
-        await page.locator(zoomIn).wait();
-        await page.locator(zoomIn).click();
-        console.log('Zoom sur la carte');
-
-        await page.locator(reloadSearch).wait();
-        await page.locator(reloadSearch).click();
-        console.log('Recherche en cours...');
+        const zoomBtn = withZoom > 0 ? zoomIn : zoomOut;
+        for (let i = 0; i < Math.abs(withZoom); i++) {
+            await page.waitForTimeout(500);
+            await page.locator(zoomBtn).wait();
+            await page.locator(zoomBtn).click();
+        }
+        console.log(`Zoom sur la carte: x${withZoom}`);
     }
+
+    await page.locator(reloadSearch).wait();
+    await page.locator(reloadSearch).click();
+    console.log('Recherche en cours...');
 
     let logements;
     try {
@@ -213,3 +218,5 @@ const scrape = async (browser, ville, destinataire, withZoom) => {
         return 'Pas de nouveaux logements';
     }
 };
+
+

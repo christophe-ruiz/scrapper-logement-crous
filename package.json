@@ -16,6 +16,7 @@
     "fs": "^0.0.1-security",
     "node-cron": "^3.0.2",
     "nodemailer": "^6.9.6",
-    "puppeteer": "^21.3.8"
+    "puppeteer": "^21.3.8",
+    "puppeteer-core": "^21.7.0"
   }
 }
