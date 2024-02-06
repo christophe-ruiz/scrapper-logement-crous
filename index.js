@@ -220,7 +220,7 @@ const scrape = async (browser, ville, destinataire, withZoom) => {
     }
 };
 
-app.get('/scrape/:destinataire', async (req, res) => {
+app.get('/foyers/:destinataire', async (req, res) => {
     const destinataire = req.params.destinataire;
 
     const regex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g;
