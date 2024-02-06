@@ -6,6 +6,7 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT_DEPLOY || 3000;
 let global_logements_precedents = {};
+let global_dispos = {};
 
 app.listen(port, () => {
     console.log(`CROUS Scrapper app listening at port ${port}`)
@@ -218,5 +219,159 @@ const scrape = async (browser, ville, destinataire, withZoom) => {
         return 'Pas de nouveaux logements';
     }
 };
+
+app.get('/scrape/:destinataire', async (req, res) => {
+    const destinataire = req.params.destinataire;
+
+    const regex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g;
+    if (!regex.test(destinataire)) {
+        res.status(400).send('Le destinataire doit être un email').end();
+    } else {
+        const browser = await puppeteer.launch({
+            headless: 'new',
+            defaultViewport: null,
+            args: [
+                '--no-sandbox',
+                '--start-maximized',
+                `--window-size=1920,1080`,
+            ],
+        });
+        await scrape2(destinataire, browser)
+            .then((result) => {
+                res.status(200).send(result).end();
+            })
+            .catch((err) => {
+                browser.close();
+                console.error(`Erreur lors du scraping: ${err}`);
+                res.status(500).send(`Erreur lors du scraping: ${err}`).end();
+            });
+    }
+});
+
+const scrape2 = async (destinataire, browser) => {
+    const foyers = [
+        {
+            url: "https://www.fac-habitat.com/fr/residences-etudiantes/id-73-quai-de-la-loire",
+            frame: "https://w2.fac-habitat.com/Quai-de-la-Loire/p/4/21/9207/version=iframe_reservation"
+        },
+        {
+            url: "https://www.fac-habitat.com/fr/residences-etudiantes/id-56-mis-pour-etudiants",
+            frame: "https://w2.fac-habitat.com/MIS-pour-etudiants/p/4/20/8205/version=iframe_reservation"
+        },
+        {
+            url: "https://www.fac-habitat.com/fr/residences-etudiantes/id-58-mis-pour-jeunes-actifs",
+            frame: "https://w2.fac-habitat.com/MIS-pour-jeunes-actifs/p/4/20/9115/version=iframe_reservation"
+        },
+        {
+            url: "https://www.fac-habitat.com/fr/residences-etudiantes/id-101-marne",
+            frame: "https://w2.fac-habitat.com/Marne/p/4/21/12672/version=iframe_reservation"
+        },
+    ]
+
+    const nouveauxLogements = [];
+
+    for (const foyer of foyers) {
+        console.log(`Visite de ${foyer.url}`);
+        const nouveauxLogementsForUrl = await visit(foyer, browser);
+        nouveauxLogements.push(...nouveauxLogementsForUrl);
+    }
+    browser.close();
+    return await sendMail(nouveauxLogements, destinataire);
+};
+
+
+const visit = async (foyer, browser) => {
+    const page = await browser.newPage();
+
+    console.log('Chargement...');
+    await page.goto(foyer.frame);
+    console.log('Page chargée.');
+
+    console.log(`Récupération des disponibilités pour ${foyer.url}`);
+    await page.locator('table').wait();
+    const disposElements = await page.$$('.dispo');
+    const typeLogement = await page.$$('.btn_type_logement');
+
+    let logementsActuels = [];
+    for (let i = 0; i < disposElements.length; i++) {
+        let logement = {};
+        logement.type = await page.evaluate(typeLogement => typeLogement.innerText, typeLogement[i]);
+        logement.dispo = await page.evaluate(dispo => dispo.innerText, disposElements[i]);
+        logement.url = foyer.url;
+        logementsActuels.push(logement);
+    }
+
+    let nouveauxLogements = [];
+    logementsActuels.forEach((logement) => {
+        if (logement.dispo !== "Aucune disponibilité") {
+            if (global_dispos[foyer.url]){
+                if (global_dispos[foyer.url][logement.type] === "Aucune disponibilité") {
+                    global_dispos[foyer.url][logement.type] = logement.dispo;
+                    nouveauxLogements.push(logement);
+                }
+            } else {
+                nouveauxLogements.push(logement);
+            }
+        }
+        if (!global_dispos[foyer.url]) {
+            global_dispos[foyer.url] = {};
+        }
+        global_dispos[foyer.url][logement.type] = logement.dispo;
+    });
+    console.log(`Logements pour ${foyer.url} mis à jour.`);
+    return nouveauxLogements;
+}
+
+const sendMail = async (nouveauxLogements, destinataire) => {
+    if (nouveauxLogements.length > 0) {
+        console.log('Envoi des données par mail...');
+        // Il y a de nouveaux logements, envoyez un e-mail
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.NODEMAILER_USER,
+                pass: process.env.NODEMAILER_PASS
+            },
+        });
+
+        let emailContent = '';
+        let emailContentHtml = ``;
+        nouveauxLogements.forEach((logement) => {
+            emailContent += `Type: ${logement.type}\n`;
+            emailContent += `Dispo ${logement.dispo}\n`;
+            emailContent += `URL: ${logement.url}\n\n`;
+
+            emailContentHtml += `
+            <div style="margin-bottom: 18px; margin-top: 0; padding: 8px 16px; box-sizing: border-box; border-radius: 20px; background: #DEDEDE;">
+                <h2 style="color: #101820;font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold; margin-bottom: 8px;">${logement.type}</h2>
+                <p style="color: #101820;font-family: 'Arial', sans-serif; font-size: 14px; margin: 0; padding: 0;">
+                    <b>Dispo</b>
+                    <span style="color: #101820; background: white; padding: 3px 12px; border-radius: 25px; box-sizing: border-box; margin-left: 4px;"> ${logement.dispo}</span>
+                </p>
+                <p style="color: #101820;font-family: 'Arial', sans-serif; font-size: 14px; margin: 0; padding: 0;">
+                    <b>URL</b>
+                    <a style="color: #101820; font-weight: bold; text-decoration: underline; background: white; padding: 3px 12px; border-radius: 25px; box-sizing: border-box; margin-left: 4px;" href="${logement.url}">Accéder au logement</a>
+                </p>
+            </div>
+        `;
+        });
+
+        const mailOptions = {
+            from: process.env.NODEMAILER_USER,
+            to: `${destinataire}`,
+            subject: `Nouveaux logements disponibles en Foyer Fac-Habitat 🏙`,
+            text: emailContent,
+            html: emailContentHtml
+        };
+
+        await transporter.sendMail(mailOptions);
+        global_dispos = nouveauxLogements;
+        console.log('Envoi des données terminé');
+        return nouveauxLogements;
+    } else {
+        console.log('Pas de nouveaux logements');
+        return 'Pas de nouveaux logements';
+    }
+}
 
 
