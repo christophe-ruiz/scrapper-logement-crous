@@ -7,6 +7,7 @@ const app = express();
 const port = process.env.PORT_DEPLOY || 3000;
 let global_logements_precedents = {};
 let global_dispos = {};
+let seenResidences = [];
 
 app.listen(port, () => {
     console.log(`CROUS Scrapper app listening at port ${port}`)
@@ -34,7 +35,7 @@ app.get('/scrape/:withZoom/:ville/:destinataire', async (req, res) => {
                 `--window-size=1920,1080`,
             ],
         });
-        await scrape(browser, ville, destinataire, zoom)
+        await crous(browser, ville, destinataire, zoom)
             .then((result) => {
                 res.status(200).send(result).end();
             })
@@ -46,7 +47,7 @@ app.get('/scrape/:withZoom/:ville/:destinataire', async (req, res) => {
     }
 });
 
-const scrape = async (browser, ville, destinataire, withZoom) => {
+const crous = async (browser, ville, destinataire, withZoom) => {
     'use strict';
     ville = ville.charAt(0).toUpperCase() + ville.slice(1);
     const url = 'https://trouverunlogement.lescrous.fr';
@@ -236,7 +237,7 @@ app.get('/foyers/:destinataire', async (req, res) => {
                 `--window-size=1920,1080`,
             ],
         });
-        await scrape2(destinataire, browser)
+        await foyersFacHabitat(destinataire, browser)
             .then((result) => {
                 res.status(200).send(result).end();
             })
@@ -248,7 +249,7 @@ app.get('/foyers/:destinataire', async (req, res) => {
     }
 });
 
-const scrape2 = async (destinataire, browser) => {
+const foyersFacHabitat = async (destinataire, browser) => {
     const foyers = [
         {
             url: "https://www.fac-habitat.com/fr/residences-etudiantes/id-73-quai-de-la-loire",
@@ -261,6 +262,10 @@ const scrape2 = async (destinataire, browser) => {
         {
             url: "https://www.fac-habitat.com/fr/residences-etudiantes/id-58-mis-pour-jeunes-actifs",
             frame: "https://w2.fac-habitat.com/MIS-pour-jeunes-actifs/p/4/20/9115/version=iframe_reservation"
+        },
+        {
+            url: "https://www.fac-habitat.com/fr/residences-etudiantes/id-101-marne",
+            frame: "https://w2.fac-habitat.com/Marne/p/4/21/12672/version=iframe_reservation"
         },
         {
             url: "https://www.fac-habitat.com/fr/residences-etudiantes/id-101-marne",
@@ -375,3 +380,40 @@ const sendMail = async (nouveauxLogements, destinataire) => {
 }
 
 
+const arpej = async () => {
+    try {
+        const response = await fetch('https://www.arpej.fr/wp-json/sn/residences?lang=fr&display=map&price_from=0&price_to=1000&show_if_full=false&show_if_colocations=false');
+        const data = await response.json();
+
+        const newResidences = data.residences.filter(residence => !seenResidences.includes(residence.ID));
+
+        seenResidences = data.residences.map(residence => residence.ID);
+
+        return newResidences;
+    } catch (error) {
+        console.error('Erreur lors de la récupération des résidences :', error.message);
+        return [];
+    }
+};
+
+app.get('/arpej/:destinataire', async (req, res) => {
+    const destinataire = req.params.destinataire;
+    const regex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g;
+    if (!regex.test(destinataire)) {
+        res.status(400).send('Le destinataire doit être un email').end();
+    }
+    try {
+        console.log('Récupération des résidences ARPEJ...')
+        const newResidences = await arpej();
+        newResidences.map(residence => {
+            residence.url = residence.link,
+            residence.type = residence.title,
+            residence.dispo = [residence.extra_data.address, residence.extra_data.zip_code, residence.extra_data.city].join(', ');
+        })
+        await sendMail(newResidences, destinataire);
+        res.status(200).json({ newResidences });
+    } catch (error) {
+        console.error('Erreur lors de l\'envoi des résidences par mail :', error.message);
+        res.status(500).send('Erreur lors de l\'envoi des résidences par mail').end();
+    }
+});
